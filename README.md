@@ -3,9 +3,9 @@
 **帮你自动追踪CV领域最新论文和GitHub项目，用本地AI写中英文摘要。省下刷arxiv的时间，专注真正重要的事。**
 
 <p align="center">
-  <img src="screenshots/dashboard.png" width="45%" alt="Dashboard" />
+  <img src="screenshots/dashboard.png" width="100%" alt="Dashboard" />
   </p>
-  <img src="screenshots/papers.png" width="45%" alt="Papers" />
+  <img src="screenshots/papers.png" width="100%" alt="Papers" />
 </p>
 
 ---
