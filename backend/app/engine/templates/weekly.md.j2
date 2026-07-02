@@ -1,0 +1,69 @@
+# Weekly Report — {{ date_range_start }} to {{ date_range_end }}
+
+**Generated:** {{ generated_at }}
+
+---
+
+## Weekly Top Papers ({{ papers | length }})
+
+{% if papers %}
+{% for paper in papers %}
+### {{ loop.index }}. {{ paper.title }}
+
+- **Source:** {{ paper.source }}
+- **Published:** {{ paper.published_date | default('N/A') }}
+- **Venue:** {{ paper.venue | default('N/A') }}
+- **URL:** {{ paper.url }}
+{% if paper.code_url %}- **Code:** {{ paper.code_url }}{% endif %}
+
+{% endfor %}
+{% else %}
+No papers found this week.
+{% endif %}
+
+---
+
+## Rising Repos This Week
+
+{% if repos %}
+{% for repo in repos %}
+### {{ loop.index }}. {{ repo.full_name }}
+
+- **Stars:** {{ repo.stars }} :star: {% if repo.star_gain %}(+{{ repo.star_gain }} this week){% endif %}
+- **Forks:** {{ repo.forks }}
+- **Language:** {{ repo.language | default('N/A') }}
+- **Topics:** {{ repo.topics | join(', ') if repo.topics else 'N/A' }}
+- **Description:** {{ repo.description | default('N/A') }}
+- **URL:** {{ repo.url }}
+
+{% endfor %}
+{% else %}
+No rising repos this week.
+{% endif %}
+
+---
+
+## Category Statistics
+
+| Category | Papers This Week | Last Week | Delta |
+|----------|------------------|-----------|-------|
+{% for cat in stats.categories | default([]) %}
+| {{ cat.name }} | {{ cat.count }} | {{ cat.prev_week_count | default('N/A') }} | {% if cat.delta is defined %}{% if cat.delta > 0 %}+{% endif %}{{ cat.delta }}{% else %}N/A{% endif %} |
+{% else %}
+| Total | {{ stats.paper_count }} | N/A | N/A |
+{% endfor %}
+
+---
+
+## New Repos This Week
+
+**Total new repos:** {{ stats.repo_count }}
+
+---
+
+## Summary
+
+- **Total papers this week:** {{ stats.paper_count }}
+- **Total repos this week:** {{ stats.repo_count }}
+
+*Report generated at {{ generated_at }}*

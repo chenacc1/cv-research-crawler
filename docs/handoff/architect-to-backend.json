@@ -1,0 +1,213 @@
+{
+  "from": "Architect",
+  "to": "Backend Developer",
+  "summary": "Build a FastAPI modular monolith that crawls arxiv and GitHub on a schedule, normalizes data into a unified database, exposes a REST API for the React frontend, and generates daily/weekly Markdown reports. The full architecture is in docs/architecture.md and the API contract is in docs/api-contract.md.",
+  "tech_stack": {
+    "language": "Python 3.12+",
+    "framework": "FastAPI 0.115+",
+    "orm": "SQLAlchemy 2.0+ (async with aiomysql/aiosqlite/asyncpg)",
+    "validation": "Pydantic 2.x",
+    "scheduler": "APScheduler 3.x (in-process, no broker)",
+    "migrations": "Alembic 1.14+",
+    "async_http": "httpx 0.28+",
+    "templating": "Jinja2 3.x (for Markdown reports)",
+    "database": "SQLite (default, via aiosqlite) or PostgreSQL (via asyncpg)",
+    "testing": "pytest 8.x + pytest-asyncio"
+  },
+  "project_structure": {
+    "entry_point": "backend/app/main.py — FastAPI app factory with lifespan (start scheduler, create FTS tables on SQLite)",
+    "config": "backend/app/config.py — Pydantic BaseSettings, reads from .env + env vars. See config_vars below.",
+    "database": "backend/app/database.py — create_async_engine, async_sessionmaker, get_db dependency",
+    "models": "backend/app/models/ — one file per entity (paper.py, author.py, category.py, repo.py, tag.py, crawl_log.py, report.py). All extend declarative Base with UUID PKs.",
+    "schemas": "backend/app/schemas/ — Pydantic request/response models, one file per resource + common.py (PaginatedResponse, ErrorResponse)",
+    "routers": "backend/app/routers/ — FastAPI APIRouter per resource. Thin: validate -> call service -> return.",
+    "services": "backend/app/services/ — Business logic. paper_service.py, repo_service.py, tag_service.py, report_service.py, crawl_service.py.",
+    "crawlers": "backend/app/crawlers/ — Plugin system. base.py (BaseCrawler ABC), registry.py (CrawlerRegistry), arxiv.py, github.py.",
+    "engine": "backend/app/engine/ — scheduler.py (APScheduler setup + job registration), report_generator.py (query -> Jinja2 -> file), templates/ (daily.md.j2, weekly.md.j2)."
+  },
+  "data_model": {
+    "paper": {
+      "table": "paper",
+      "columns": "id (UUID PK), title (String 1024, NOT NULL), title_normalized (String 1024, NOT NULL, lowercased + whitespace-collapsed — used for cross-source dedup), abstract (Text, nullable), url (String 2048, NOT NULL), pdf_url (String 2048, nullable), code_url (String 2048, nullable), source (String 32, NOT NULL), source_id (String 128, NOT NULL), venue (String 256, nullable), published_date (Date, nullable), crawled_at (DateTime UTC, NOT NULL, default utcnow), updated_at (DateTime UTC, NOT NULL, default utcnow, onupdate utcnow), merged_into_id (UUID, nullable, FK self)",
+      "unique_constraints": ["(source, source_id)"],
+      "indexes": ["published_date DESC", "crawled_at", "title_normalized", "source", "merged_into_id"],
+      "relationships": "authors (M2M via paper_author), categories (M2M via paper_category), tags (M2M via paper_tag), merged_into (self FK)",
+      "fts": "For SQLite: CREATE VIRTUAL TABLE paper_fts USING fts5(title, abstract, content='paper', content_rowid='id') with triggers on INSERT/UPDATE/DELETE. For PostgreSQL: ALTER TABLE paper ADD COLUMN search_vector tsvector; CREATE INDEX ON paper USING GIN(search_vector). The service layer abstracts which backend to use."
+    },
+    "author": {
+      "table": "author",
+      "columns": "id (UUID PK), name (String 256, NOT NULL, UNIQUE), affiliation (Text, nullable)",
+      "indexes": ["name UNIQUE"]
+    },
+    "paper_author": {
+      "table": "paper_author",
+      "columns": "paper_id (FK paper.id CASCADE), author_id (FK author.id CASCADE), author_order (Integer, default 0)",
+      "unique_constraints": ["(paper_id, author_id)"],
+      "indexes": ["author_id"]
+    },
+    "category": {
+      "table": "category",
+      "columns": "id (UUID PK), name (String 128, NOT NULL), source (String 32, NOT NULL)",
+      "unique_constraints": ["(source, name)"]
+    },
+    "paper_category": {
+      "table": "paper_category",
+      "columns": "paper_id (FK paper.id CASCADE), category_id (FK category.id CASCADE)",
+      "unique_constraints": ["(paper_id, category_id)"]
+    },
+    "github_repo": {
+      "table": "github_repo",
+      "columns": "id (UUID PK), full_name (String 256, NOT NULL, UNIQUE), description (Text, nullable), url (String 2048, NOT NULL), stars (Integer, default 0), forks (Integer, default 0), language (String 64, nullable), topics (JSON, nullable — list of strings), pushed_at (DateTime UTC, nullable), crawled_at (DateTime UTC, NOT NULL, default utcnow), last_crawled_at (DateTime UTC, NOT NULL, default utcnow)",
+      "unique_constraints": ["full_name"],
+      "indexes": ["stars DESC", "pushed_at DESC", "language"],
+      "relationships": "tags (M2M via repo_tag)"
+    },
+    "user_tag": {
+      "table": "user_tag",
+      "columns": "id (UUID PK), name (String 64, NOT NULL, UNIQUE), color (String 7, NOT NULL — hex from fixed 16-color palette), created_at (DateTime UTC, NOT NULL, default utcnow)",
+      "unique_constraints": ["name"]
+    },
+    "paper_tag": {
+      "table": "paper_tag",
+      "columns": "paper_id (FK paper.id CASCADE), tag_id (FK user_tag.id CASCADE)",
+      "unique_constraints": ["(paper_id, tag_id)"]
+    },
+    "repo_tag": {
+      "table": "repo_tag",
+      "columns": "repo_id (FK github_repo.id CASCADE), tag_id (FK user_tag.id CASCADE)",
+      "unique_constraints": ["(repo_id, tag_id)"]
+    },
+    "crawl_log": {
+      "table": "crawl_log",
+      "columns": "id (UUID PK), source (String 32, NOT NULL), started_at (DateTime UTC, NOT NULL), finished_at (DateTime UTC, nullable), items_found (Integer, default 0), items_new (Integer, default 0), items_updated (Integer, default 0), status (String 16, NOT NULL, default 'running'), error_message (Text, nullable)",
+      "indexes": ["(source, started_at DESC)"]
+    },
+    "report": {
+      "table": "report",
+      "columns": "id (UUID PK), type (String 16, NOT NULL — 'daily' or 'weekly'), date_range_start (Date, NOT NULL), date_range_end (Date, NOT NULL), file_path (String 2048, NOT NULL), paper_count (Integer, default 0), repo_count (Integer, default 0), delivery_status (String 16, default 'pending' — 'pending', 'delivered', 'failed'), generated_at (DateTime UTC, NOT NULL, default utcnow)",
+      "indexes": ["(type, generated_at DESC)"]
+    }
+  },
+  "dedup_merge_strategy": {
+    "step1": "On crawl, check (source, source_id) uniqueness. If exists, UPDATE the record (upsert).",
+    "step2": "After upsert, compute difflib.SequenceMatcher ratio on title_normalized against papers from OTHER sources.",
+    "step3": "If ratio >= 0.85, set the newer record's merged_into_id to point to the older (canonical) record. The canonical record is the one with merged_into_id IS NULL.",
+    "step4": "When serving GET /papers/{id}, include versions: all papers whose merged_into_id = this id."
+  },
+  "config_vars": {
+    "DATABASE_URL": "sqlite+aiosqlite:///./data/app.db (default) — switch to postgresql+asyncpg://... for production",
+    "GITHUB_TOKEN": "'' — GitHub personal access token. Without it, rate limit is 60 req/h; with it, 5000 req/h.",
+    "CRAWLER_ARXIV_ENABLED": "true",
+    "CRAWLER_ARXIV_INTERVAL_MINUTES": "360 (6 hours)",
+    "CRAWLER_ARXIV_DELAY_SECONDS": "3.0 (polite-use policy)",
+    "CRAWLER_GITHUB_ENABLED": "true",
+    "CRAWLER_GITHUB_INTERVAL_MINUTES": "120 (2 hours, configurable)",
+    "CRAWLER_GITHUB_DELAY_SECONDS": "2.0",
+    "REPORT_OUTPUT_DIR": "./reports",
+    "REPORT_DAILY_CRON": "0 22 * * *",
+    "REPORT_WEEKLY_CRON": "0 10 * * 1",
+    "LOG_LEVEL": "INFO",
+    "API_CORS_ORIGINS": "http://localhost:5173"
+  },
+  "crawler_plugin_system": {
+    "base_class": "BaseCrawler(ABC) with attributes: source: str, delay_seconds: float. Abstract methods: async fetch(params) -> list[dict], normalize(raw) -> dict, async run(db: AsyncSession) -> CrawlLog",
+    "registry": "CrawlerRegistry: class-level dict mapping source strings to crawler classes. Methods: register(cls), get(source), list_all(). Registration happens at import time in crawlers/__init__.py.",
+    "arxiv_crawler": "Queries arxiv API (export.arxiv.org/api/query) for cs.CV, cs.AI, cs.LG, cs.MM, cs.CL. Parses ATOM XML. 3s delay. source='arxiv', source_id=arxiv ID.",
+    "github_crawler": "Queries GitHub Search API and Trending page. Topics: computer-vision, deep-learning, object-detection, image-segmentation, generative-models, nerf, 3d-vision, multimodal, video-understanding. Handles 429 via exponential backoff with jitter (1s, 2s, 4s, 8s, max 60s). source='github'. On existing repo: update stars, forks, pushed_at, last_crawled_at.",
+    "error_isolation": "Each crawler.run() is wrapped in try/except in scheduler.py. A failure in one crawler logs to CrawlLog with status='failed' and does NOT affect other crawlers or the scheduler.",
+    "adding_new_source": "1) Create new file in crawlers/ extending BaseCrawler. 2) Register in __init__.py. 3) Add scheduler job. 4) No core code changes needed."
+  },
+  "report_engine": {
+    "pipeline": "Scheduler triggers -> report_generator.generate(type) -> queries DB for date range -> groups papers by category, sorts by relevance (keyword match heuristic) -> selects trending repos (highest star gain since last report) -> renders Jinja2 template -> writes Markdown to reports/ directory -> persists Report record with delivery_status='delivered'",
+    "daily_report": "Date range: today 00:00 to 23:59. Sections: top 20 new papers grouped by category, new trending repos, category breakdown counts.",
+    "weekly_report": "Date range: last Monday 00:00 to Sunday 23:59. Sections: top 30 papers, rising repos (biggest star gain), category stats with week-over-week delta, new repos this week.",
+    "templates": "Jinja2 .md.j2 files in backend/app/engine/templates/. Variables: papers, repos, stats, date_range, generated_at.",
+    "filesystem": "Reports saved to {REPORT_OUTPUT_DIR}/{type}-{date_range_end}.md. Appended, never overwritten."
+  },
+  "scheduler_jobs": [
+    {"name": "crawl_arxiv", "trigger": "interval", "minutes": "from CRAWLER_ARXIV_INTERVAL_MINUTES (360)", "func": "run ArxivCrawler wrapped in try/except -> log to CrawlLog"},
+    {"name": "crawl_github", "trigger": "interval", "minutes": "from CRAWLER_GITHUB_INTERVAL_MINUTES (120)", "func": "run GitHubCrawler wrapped in try/except -> log to CrawlLog"},
+    {"name": "report_daily", "trigger": "cron", "cron": "from REPORT_DAILY_CRON (0 22 * * *)", "func": "report_generator.generate('daily')"},
+    {"name": "report_weekly", "trigger": "cron", "cron": "from REPORT_WEEKLY_CRON (0 10 * * 1)", "func": "report_generator.generate('weekly')"}
+  ],
+  "api_endpoints": {
+    "papers": [
+      "GET /api/v1/papers — list with filters (source, category, date_from, date_to, q, tag_id, venue), sort (published_date/-published_date/crawled_at/title), pagination",
+      "GET /api/v1/papers/{id} — full detail with authors, categories, tags, versions",
+      "PUT /api/v1/papers/{id}/tags — replace tags (body: {tag_ids: UUID[]})"
+    ],
+    "repos": [
+      "GET /api/v1/repos — list with filters (language, topic, stars_min, stars_max, pushed_after, pushed_before, tag_id, q), sort (stars/-stars/forks/pushed_at/crawled_at), pagination",
+      "GET /api/v1/repos/{id} — full detail with tags",
+      "PUT /api/v1/repos/{id}/tags — replace tags (body: {tag_ids: UUID[]})"
+    ],
+    "tags": [
+      "GET /api/v1/tags — list all (not paginated, small dataset). Each includes paper_count and repo_count.",
+      "POST /api/v1/tags — create (body: {name: str, color: str — must be in 16-color palette})",
+      "PUT /api/v1/tags/{id} — update name/color (body: {name?: str, color?: str})",
+      "DELETE /api/v1/tags/{id} — delete, cascades removal from paper_tag and repo_tag"
+    ],
+    "reports": [
+      "GET /api/v1/reports — list with type filter, sort, pagination",
+      "GET /api/v1/reports/{id} — metadata + raw Markdown content (read from disk)",
+      "POST /api/v1/reports/{id}/retry — regenerate this report for its original date range"
+    ],
+    "crawls": [
+      "GET /api/v1/crawls/logs — paginated log history, filterable by source and status",
+      "GET /api/v1/crawls/status — scheduler status: registered jobs with enabled, last_run, next_run, last_status",
+      "POST /api/v1/crawls/trigger/{source} — manually trigger a crawl (async, returns 202 immediately)"
+    ],
+    "categories": [
+      "GET /api/v1/categories — list all (optionally filtered by source). Includes paper_count per category."
+    ],
+    "authors": [
+      "GET /api/v1/authors — list with search (q), pagination. Each includes paper_count.",
+      "GET /api/v1/authors/{id} — detail with their papers"
+    ],
+    "system": [
+      "GET /api/v1/health — health check (DB connectivity, scheduler status, version)",
+      "GET /api/v1/stats — dashboard stats (total papers/repos/tags, by-source breakdown, new today/week, crawl success rate, top categories, top languages)"
+    ]
+  },
+  "pagination_convention": {
+    "request": "?page=1&page_size=20 (page_size max 100)",
+    "response": "{ items: T[], total: int, page: int, page_size: int, pages: int }"
+  },
+  "error_format": {
+    "shape": "{ error: { code: string, message: string, details?: object } }",
+    "codes": "VALIDATION_ERROR (422), RESOURCE_NOT_FOUND (404), RESOURCE_CONFLICT (409), CRAWLER_BUSY (409), CRAWLER_NOT_FOUND (404), INTERNAL_ERROR (500)"
+  },
+  "tag_color_palette": [
+    "#EF4444", "#F97316", "#F59E0B", "#EAB308",
+    "#84CC16", "#22C55E", "#10B981", "#14B8A6",
+    "#06B6D4", "#3B82F6", "#6366F1", "#8B5CF6",
+    "#A855F7", "#D946EF", "#EC4899", "#6B7280"
+  ],
+  "application_lifespan": [
+    "On startup: create engine, run Alembic migrations (or create_all in dev), create FTS5 virtual table + triggers if SQLite, register crawlers in CrawlerRegistry, start APScheduler with registered jobs.",
+    "On shutdown: shutdown APScheduler, dispose SQLAlchemy engine."
+  ],
+  "testing_requirements": [
+    "Use pytest-asyncio with a test SQLite database (in-memory or temp file).",
+    "conftest.py provides: async test client (httpx.AsyncClient via FastAPI TestClient), test DB session with create_all/drop_all per test.",
+    "Test each crawler's normalize() method with sample API responses (mocked HTTP).",
+    "Test each router endpoint for correct status codes, response shapes, and filter behavior.",
+    "Test dedup merge logic: insert two papers with similar titles, verify merged_into_id is set.",
+    "Test report generation: generate a report, verify file exists and contains expected sections."
+  ],
+  "excluded_from_v1": [
+    "Papers With Code crawler (skip entirely)",
+    "Conference proceedings crawler (dblp/OpenReview — skip, but Paper model has venue field ready)",
+    "User authentication, sessions, or RBAC",
+    "Email/Slack/webhook report delivery (model has delivery_status ready)",
+    "PDF full-text parsing",
+    "BibTeX/CSV export",
+    "CI/CD pipeline",
+    "Data auto-pruning (keep everything)"
+  ],
+  "pointers": {
+    "architecture": "docs/architecture.md",
+    "api_contract": "docs/api-contract.md",
+    "requirements": "docs/requirements.md (sections P0 user stories 1-8)"
+  }
+}

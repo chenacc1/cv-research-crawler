@@ -1,0 +1,86 @@
+<h2>Three Architecture Approaches</h2>
+<p class="subtitle">Trade-offs across simplicity, scalability, and development speed</p>
+
+<div class="section">
+  <h3>Approach A — Monolithic All-in-One</h3>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">A: Single Python Process</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div class="placeholder" style="flex:1;min-width:100px;">Scheduler<br/>(APScheduler)</div>
+      <div class="placeholder" style="flex:1;min-width:100px;">Crawlers<br/>(arxiv/GitHub)</div>
+      <div class="placeholder" style="flex:1;min-width:100px;">Report Gen<br/>(Markdown)</div>
+      <div class="placeholder" style="flex:1;min-width:100px;">Web Server<br/>(FastAPI)</div>
+      <div class="placeholder" style="flex:1;min-width:100px;">SQLite</div>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros"><h4>Pros</h4><ul><li>最快搭建，一个进程搞定</li><li>部署简单，一条命令启动</li><li>调试方便</li></ul></div>
+  <div class="cons"><h4>Cons</h4><ul><li>爬虫故障可能拖垮 Web</li><li>扩展困难，耦合度高</li><li>SQLite 不适合高并发</li></ul></div>
+</div>
+
+<div class="section">
+  <h3>Approach B — Heavyweight Microservices</h3>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">B: Full Microservice Architecture</div>
+  <div class="mockup-body">
+    <div style="display:flex;flex-direction:column;gap:8px;align-items:center;">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+        <div class="placeholder" style="max-width:140px;">API Gateway</div>
+        <div class="placeholder" style="max-width:140px;">Auth Service</div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+        <div class="placeholder" style="max-width:120px;">Arxiv Worker</div>
+        <div class="placeholder" style="max-width:120px;">GitHub Worker</div>
+        <div class="placeholder" style="max-width:120px;">Paper Worker</div>
+        <div class="placeholder" style="max-width:120px;">Report Worker</div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+        <div class="placeholder" style="max-width:140px;">Redis</div>
+        <div class="placeholder" style="max-width:140px;">PostgreSQL</div>
+        <div class="placeholder" style="max-width:140px;">Message Queue</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros"><h4>Pros</h4><ul><li>高可扩展，各模块独立部署</li><li>故障隔离好</li><li>生产级可靠性</li></ul></div>
+  <div class="cons"><h4>Cons</h4><ul><li>过度设计，开发周期长</li><li>运维成本高（Redis/MQ/多容器）</li><li>个人使用场景杀鸡用牛刀</li></ul></div>
+</div>
+
+<div class="section">
+  <h3>Approach C — Modular Monolith (Recommended)</h3>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">C: Modular Monolith with Clean Boundaries</div>
+  <div class="mockup-body">
+    <div style="display:flex;flex-direction:column;gap:8px;align-items:center;">
+      <div style="width:100%;text-align:center;margin-bottom:4px;"><strong>React Frontend</strong> → REST API</div>
+      <div style="border:2px solid var(--accent);border-radius:8px;padding:12px;width:100%;">
+        <div style="text-align:center;margin-bottom:8px;color:var(--accent);"><strong>FastAPI Backend</strong></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+          <div class="mock-content" style="flex:1;min-width:100px;max-width:150px;text-align:center;">Scheduler</div>
+          <div class="mock-content" style="flex:1;min-width:100px;max-width:150px;text-align:center;">Crawler<br/>Registry</div>
+          <div class="mock-content" style="flex:1;min-width:100px;max-width:150px;text-align:center;">Report<br/>Engine</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+        <div class="placeholder" style="max-width:180px;">SQLite (local)<br/>⇄ PostgreSQL (server)</div>
+        <div class="placeholder" style="max-width:180px;">APScheduler<br/>(in-process)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros"><h4>Pros</h4><ul><li>模块边界清晰，爬虫/API/报告各自独立文件</li><li>SQLite 本地零配置 → PostgreSQL 一行配置切换</li><li>后续按需拆分微服务容易</li><li>Docker 一键部署</li></ul></div>
+  <div class="cons"><h4>Cons</h4><ul><li>仍是单进程，大量爬取任务会阻塞</li><li>无消息队列做任务削峰</li><li>对个人使用足够，但不适合团队协作</li></ul></div>
+</div>

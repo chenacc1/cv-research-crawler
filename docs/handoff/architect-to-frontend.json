@@ -1,0 +1,132 @@
+{
+  "from": "Architect",
+  "to": "Frontend Developer",
+  "summary": "Build a React SPA for browsing crawled papers and GitHub repos, managing tags, viewing scheduled Markdown reports, and monitoring crawl status. The API is documented in docs/api-contract.md. All pages are desktop-first, single-user, no auth.",
+  "tech_stack": {
+    "framework": "React 18",
+    "language": "TypeScript 5",
+    "build_tool": "Vite 6",
+    "styling": "Tailwind CSS 4",
+    "routing": "React Router v6",
+    "http_client": "axios 1.x",
+    "markdown_rendering": "react-markdown 9.x (with remark-gfm, rehype-highlight)"
+  },
+  "pages": [
+    {
+      "route": "/papers",
+      "component": "PaperListPage",
+      "description": "Browse crawled papers with multi-select filters (source, category, date range, tags), full-text keyword search, and sortable/paginated results. Each row shows title, source badge, venue, published date, categories as tags, user tags as colored badges, and author names. Clicking a row navigates to PaperDetailPage. External links open paper URL and PDF URL in new tabs.",
+      "api_calls": ["GET /api/v1/papers", "GET /api/v1/categories", "GET /api/v1/tags"],
+      "components": ["FilterBar (with FilterChip)", "SortableTable", "Pagination", "TagBadge", "DateRangePicker", "LoadingSkeleton"]
+    },
+    {
+      "route": "/papers/:id",
+      "component": "PaperDetailPage",
+      "description": "Full paper detail view: title, abstract (full text), authors with affiliations, categories, venue, published date, links to paper URL / PDF / code URL. User tags section with TagSelector to add/remove tags. If the paper has version records (merged_into_id or versions list), show a 'Versions' section linking to the other version.",
+      "api_calls": ["GET /api/v1/papers/{id}", "PUT /api/v1/papers/{id}/tags", "GET /api/v1/tags"],
+      "components": ["TagBadge", "TagSelector", "LoadingSkeleton"]
+    },
+    {
+      "route": "/repos",
+      "component": "RepoListPage",
+      "description": "Browse crawled GitHub repos with filters (language, topic, star range, recency, tags), search by name/description, and sortable columns (stars, forks, pushed_at). Each row shows full_name, description, stars/forks counts, language badge, topic tags, and user tags. Clicking navigates to RepoDetailPage. External link to GitHub.",
+      "api_calls": ["GET /api/v1/repos", "GET /api/v1/tags"],
+      "components": ["FilterBar (with FilterChip)", "SortableTable", "Pagination", "TagBadge", "DateRangePicker", "LoadingSkeleton"]
+    },
+    {
+      "route": "/repos/:id",
+      "component": "RepoDetailPage",
+      "description": "Full repo detail: full_name, description, star/forks counts, language, topics list, last pushed date, crawl history timestamps. User tags with TagSelector.",
+      "api_calls": ["GET /api/v1/repos/{id}", "PUT /api/v1/repos/{id}/tags", "GET /api/v1/tags"],
+      "components": ["TagBadge", "TagSelector", "LoadingSkeleton"]
+    },
+    {
+      "route": "/tags",
+      "component": "TagManagePage",
+      "description": "CRUD management for user-defined tags. Table of all tags showing name, color swatch, paper_count, repo_count. Inline edit for name and color (color picker restricted to 16-color palette). Delete with confirmation dialog (warns about removal from all papers/repos). Create new tag form.",
+      "api_calls": ["GET /api/v1/tags", "POST /api/v1/tags", "PUT /api/v1/tags/{id}", "DELETE /api/v1/tags/{id}"],
+      "components": ["TagBadge", "LoadingSkeleton"]
+    },
+    {
+      "route": "/reports",
+      "component": "ReportListPage",
+      "description": "Paginated list of generated reports. Each row shows type (daily/weekly badge), date range, paper/repo counts, delivery status badge, generation timestamp. Click navigates to ReportViewPage.",
+      "api_calls": ["GET /api/v1/reports"],
+      "components": ["Pagination", "StatusBadge", "LoadingSkeleton"]
+    },
+    {
+      "route": "/reports/:id",
+      "component": "ReportViewPage",
+      "description": "Renders the report's Markdown inline using react-markdown with GFM table and code syntax highlighting support. Header shows report metadata (type, date range, counts, when generated). 'Regenerate' button calls retry endpoint.",
+      "api_calls": ["GET /api/v1/reports/{id}", "POST /api/v1/reports/{id}/retry"],
+      "components": ["MarkdownViewer", "StatusBadge", "LoadingSkeleton"]
+    },
+    {
+      "route": "/crawls",
+      "component": "CrawlStatusPage",
+      "description": "Two sections: (1) Crawl log table with pagination -- shows source, start/end time, items found/new/updated, status badge, error message if any. Filterable by source and status. (2) Scheduler status cards showing each job's enabled state, last/next run time, last status. 'Trigger Now' button per source to manually start a crawl.",
+      "api_calls": ["GET /api/v1/crawls/logs", "GET /api/v1/crawls/status", "POST /api/v1/crawls/trigger/{source}"],
+      "components": ["Pagination", "StatusBadge", "LoadingSkeleton"]
+    }
+  ],
+  "shared_components": {
+    "AppShell": "Sidebar + main content area layout. Sidebar has nav links: Papers, Repos, Tags, Reports, Crawls. Active link highlighted. Header shows app name 'CV Research Crawler'.",
+    "FilterBar": "Horizontal bar containing active filter chips. Each chip shows the filter dimension and value, with an X to remove. When no filters active, shows placeholder text.",
+    "FilterChip": "Small pill showing 'Source: arxiv', 'Category: cs.CV', etc. Has remove button.",
+    "Pagination": "Page numbers with prev/next. Shows 'Page 1 of 8 (150 items)'. Disabled states for first/last page.",
+    "SortableTable": "Table with clickable column headers for sorting. Shows sort direction indicator. Renders children as rows.",
+    "TagBadge": "Small colored pill. Background is the tag color at 15% opacity, text is the tag color at full opacity, with a small color dot.",
+    "TagSelector": "Dropdown multi-select for tags. Shows available tags with their color badges. Selected tags appear as removable pills above the dropdown.",
+    "DateRangePicker": "Two date inputs (from/to) side by side. Clear button.",
+    "MarkdownViewer": "Wrapper around react-markdown. Prose-styled with Tailwind typography plugin. Supports GFM tables, fenced code blocks with syntax highlighting, and heading anchors.",
+    "StatusBadge": "Colored pill: green=success/delivered, yellow=partial/running/pending, red=failed, gray=unknown.",
+    "LoadingSkeleton": "Pulsing placeholder rectangles matching the layout of the content being loaded."
+  },
+  "types": {
+    "common": "PaginatedResponse<T> (items, total, page, page_size, pages), ApiError (error.code, error.message, error.details)",
+    "paper": "PaperSummary, PaperDetail, PaperVersionRef, CategoryRef, AuthorRef, AuthorPaperRef",
+    "repo": "RepoSummary, RepoDetail",
+    "tag": "TagRef (id, name, color), TagDetail (extends with paper_count, repo_count, created_at)",
+    "report": "ReportSummary, ReportDetail (extends with content: string)",
+    "crawl": "CrawlLogEntry, CrawlJobStatus"
+  },
+  "api_base_url": "http://localhost:8000/api/v1 (development via Vite proxy; production via nginx reverse proxy)",
+  "state_management": "No global state library. Each page fetches its own data via custom hooks. Tags list can be fetched once and cached in a shared hook since it's small and frequently referenced.",
+  "hooks": {
+    "usePapers(params)": "Returns { papers, total, loading, error, refetch }. params is PaperQueryParams (page, page_size, source[], category[], date_from, date_to, q, tag_id[], sort).",
+    "useRepos(params)": "Returns { repos, total, loading, error, refetch }. params is RepoQueryParams (page, page_size, language[], topic[], stars_min, stars_max, pushed_after, pushed_before, tag_id[], q, sort).",
+    "useTags()": "Returns { tags, loading, error, refetch, createTag, updateTag, deleteTag }. Cached globally.",
+    "useReports(params)": "Returns { reports, total, loading, error, refetch }.",
+    "useCrawlStatus()": "Returns { logs, jobs, loading, error, triggerCrawl }.",
+    "useDebounce(value, delay)": "Debounces a value for search input."
+  },
+  "routing": {
+    "/": "Redirect to /papers",
+    "/papers": "PaperListPage",
+    "/papers/:id": "PaperDetailPage",
+    "/repos": "RepoListPage",
+    "/repos/:id": "RepoDetailPage",
+    "/tags": "TagManagePage",
+    "/reports": "ReportListPage",
+    "/reports/:id": "ReportViewPage",
+    "/crawls": "CrawlStatusPage"
+  },
+  "tag_color_palette": [
+    "#EF4444", "#F97316", "#F59E0B", "#EAB308",
+    "#84CC16", "#22C55E", "#10B981", "#14B8A6",
+    "#06B6D4", "#3B82F6", "#6366F1", "#8B5CF6",
+    "#A855F7", "#D946EF", "#EC4899", "#6B7280"
+  ],
+  "pointers": {
+    "api_contract": "docs/api-contract.md",
+    "architecture": "docs/architecture.md (sections 2, 8)",
+    "requirements": "docs/requirements.md (sections P0 user stories 3-8)"
+  },
+  "excluded_from_v1": [
+    "User authentication or login pages",
+    "Mobile responsive layout (desktop-first, min-width 1024px)",
+    "i18n framework (UI text in English, Chinese labels OK inline)",
+    "Paper recommendation or ML ranking UI",
+    "Statistics dashboard chart widgets (stats are API-ready but no visualization in V1)"
+  ]
+}

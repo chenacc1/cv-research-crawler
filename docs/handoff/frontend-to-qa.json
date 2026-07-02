@@ -1,0 +1,106 @@
+{
+  "from": "Frontend Developer",
+  "to": "QA",
+  "status": "DONE_WITH_CONCERNS",
+  "summary": "All 9 routes, shared components, hooks, and API layer implemented. Build verification requires npm install first. One design divergence noted (card layout vs table).",
+  "implementation_scope": {
+    "total_files": 49,
+    "pages": 9,
+    "shared_components": 11,
+    "hooks": 6,
+    "api_modules": 9,
+    "type_files": 8,
+    "routes_implemented": [
+      { "route": "/", "component": "DashboardPage", "status": "done" },
+      { "route": "/papers", "component": "PaperListPage", "status": "done" },
+      { "route": "/papers/:id", "component": "PaperDetailPage", "status": "done" },
+      { "route": "/repos", "component": "RepoListPage", "status": "done" },
+      { "route": "/repos/:id", "component": "RepoDetailPage", "status": "done" },
+      { "route": "/tags", "component": "TagManagePage", "status": "done" },
+      { "route": "/reports", "component": "ReportListPage", "status": "done" },
+      { "route": "/reports/:id", "component": "ReportViewPage", "status": "done" },
+      { "route": "/crawls", "component": "CrawlStatusPage", "status": "done" }
+    ]
+  },
+  "checklist": {
+    "types_match_api_schemas": true,
+    "all_21_endpoints_covered": true,
+    "loading_states": true,
+    "empty_states": true,
+    "error_states": true,
+    "pagination": true,
+    "tag_crud_with_16_color_palette": true,
+    "markdown_rendering_with_gfm_and_highlight": true,
+    "date_range_filter": true,
+    "tag_selector_multi_select": true,
+    "sidebar_navigation": true,
+    "no_global_state_library": true,
+    "no_backend_code_modified": true,
+    "desktop_responsive_grid": true,
+    "tailwind_only_styling": true,
+    "tag_color_palette_exact_match": true
+  },
+  "concerns": [
+    {
+      "id": "FC-001",
+      "severity": "low",
+      "description": "PaperListPage and RepoListPage use a card grid layout instead of the SortableTable row layout specified in the page component lists. Card layout was chosen because: (1) SortableTable is mentioned in page component lists but not defined in shared_components, (2) cards render paper/repo metadata more readably, (3) cards scale better on desktop. If tables are strongly preferred, a SortableTable shared component should be created and the list pages refactored.",
+      "recommendation": "QA should verify the card layout is acceptable; if not, create SortableTable component and rework both list pages."
+    },
+    {
+      "id": "FC-002",
+      "severity": "low",
+      "description": "Sidebar navigation icons use Unicode emoji characters instead of SVG icon components. Emoji rendering varies by OS and browser. For production, consider replacing with an icon library (e.g. lucide-react or heroicons).",
+      "recommendation": "Acceptable for V1; upgrade to SVG icons in V2."
+    },
+    {
+      "id": "FC-003",
+      "severity": "medium",
+      "description": "npm install has not been run. The project needs dependencies installed before it can build. Run: cd frontend && npm install && npm run build",
+      "recommendation": "Run npm install and verify the build succeeds with no TypeScript errors."
+    },
+    {
+      "id": "FC-004",
+      "severity": "low",
+      "description": "The multi-select source/language filter uses native HTML <select multiple> which has poor UX on desktop (requires Ctrl+Click). Consider replacing with a chip-based multi-select component.",
+      "recommendation": "Acceptable for V1; enhance in V2."
+    },
+    {
+      "id": "FC-005",
+      "severity": "info",
+      "description": "Authors and Authors/:id API endpoints are implemented in the API layer (api/authors.ts) but there is no author browsing page. The API contract includes these endpoints but the handoff does not specify author routes.",
+      "recommendation": "API functions available for future use; no page needed for V1."
+    }
+  ],
+  "verification_steps": [
+    "1. cd frontend && npm install && npm run build -- verify zero TypeScript errors",
+    "2. npm run dev -- start dev server on port 5173",
+    "3. Verify Dashboard loads at / with stats from GET /api/v1/stats",
+    "4. Navigate to /papers -- verify card grid, filters (source, date, tags, search), pagination",
+    "5. Click a paper card -- verify PaperDetailPage with full metadata, external links, tag management",
+    "6. Navigate to /repos -- verify card grid, filters (language, stars, search), pagination",
+    "7. Click a repo card -- verify RepoDetailPage with stats, topics, tags",
+    "8. Navigate to /tags -- verify CRUD: create, inline edit name/color, delete with confirm dialog",
+    "9. Navigate to /reports -- verify table list with type filter, status badges",
+    "10. Click a report -- verify Markdown renders with syntax highlighting and GFM tables",
+    "11. Click Regenerate on a report -- verify POST /reports/:id/retry is called",
+    "12. Navigate to /crawls -- verify scheduler job cards and crawl log table",
+    "13. Click Trigger Now on arxiv/github -- verify POST /crawls/trigger/:source",
+    "14. Verify loading skeletons appear before data loads",
+    "15. Verify error states show red banner on API failures",
+    "16. Verify empty states show friendly message when no data",
+    "17. Verify sidebar active link highlighting on each page",
+    "18. Verify 404 route redirects to /",
+    "19. Verify all external links open in new tabs with rel=noopener noreferrer"
+  ],
+  "file_inventory": {
+    "config_files": ["package.json", "tsconfig.json", "vite.config.ts", "index.html", "postcss.config.mjs"],
+    "entry": ["src/main.tsx", "src/App.tsx", "src/index.css", "src/vite-env.d.ts"],
+    "types": ["src/types/common.ts", "src/types/paper.ts", "src/types/repo.ts", "src/types/tag.ts", "src/types/report.ts", "src/types/crawl.ts", "src/types/stats.ts", "src/types/index.ts"],
+    "api": ["src/api/client.ts", "src/api/papers.ts", "src/api/repos.ts", "src/api/tags.ts", "src/api/reports.ts", "src/api/crawls.ts", "src/api/categories.ts", "src/api/authors.ts", "src/api/stats.ts"],
+    "hooks": ["src/hooks/useDebounce.ts", "src/hooks/usePapers.ts", "src/hooks/useRepos.ts", "src/hooks/useTags.ts", "src/hooks/useReports.ts", "src/hooks/useCrawlStatus.ts"],
+    "shared_components": ["src/components/shared/LoadingSkeleton.tsx", "src/components/shared/StatusBadge.tsx", "src/components/shared/TagBadge.tsx", "src/components/shared/TagSelector.tsx", "src/components/shared/FilterChip.tsx", "src/components/shared/FilterBar.tsx", "src/components/shared/Pagination.tsx", "src/components/shared/DateRangePicker.tsx", "src/components/shared/MarkdownViewer.tsx"],
+    "layout_components": ["src/components/layout/Sidebar.tsx", "src/components/layout/AppShell.tsx"],
+    "pages": ["src/pages/DashboardPage.tsx", "src/pages/PaperListPage.tsx", "src/pages/PaperDetailPage.tsx", "src/pages/RepoListPage.tsx", "src/pages/RepoDetailPage.tsx", "src/pages/TagManagePage.tsx", "src/pages/ReportListPage.tsx", "src/pages/ReportViewPage.tsx", "src/pages/CrawlStatusPage.tsx"]
+  }
+}

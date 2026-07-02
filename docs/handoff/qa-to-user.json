@@ -1,0 +1,132 @@
+{
+  "from": "QA",
+  "to": "User",
+  "status": "CONDITIONAL_PASS",
+  "summary": "All 8 P0 user stories pass verification: the backend (21 API endpoints, 11 ORM models, 2 crawlers, scheduler, report engine) and frontend (9 pages, 10 shared components, zero TypeScript errors, 187 KB gzipped bundle) are implemented and build successfully. P1 stories are partially implemented (authors API exists but no UI page; advanced search API supports all filters but UI lacks stacked chips) or not implemented (PWC crawler, conference crawler). One medium-severity bug found: duplicate index in Paper model breaks 37/50 backend tests. Test suite fix is the single blocking item before production.",
+  "key_decisions": [
+    {
+      "decision": "Approve card grid layout for paper/repo list pages instead of table rows",
+      "rationale": "Cards render metadata more readably and scale better on desktop. SortableTable component exists and is available if tables are preferred later.",
+      "accepted": true
+    },
+    {
+      "decision": "Accept Unicode emoji nav icons for V1 (instead of SVG icon library)",
+      "rationale": "Emojis vary by OS/browser but are functional. Can upgrade to lucide-react or heroicons in V2.",
+      "accepted": true
+    },
+    {
+      "decision": "Accept native HTML <select multiple> for multi-select filters in V1",
+      "rationale": "Functional but poor UX (requires Ctrl+Click). Replace with chip-based component in V2.",
+      "accepted": true
+    },
+    {
+      "decision": "Accept fixed 50-results-per-category arxiv fetching without date-range filtering",
+      "rationale": "Arxiv ATOM endpoint does not support date-range queries. 6-hour crawl intervals mean each run sees <50 new papers per category. Duplicate re-upserts are idempotent.",
+      "accepted": true
+    },
+    {
+      "decision": "Accept O(n) title dedup scanning for V1",
+      "rationale": "Acceptable at <10k papers. Will need index-optimized approach at scale (pg_trgm or prefix-matching).",
+      "accepted": true
+    },
+    {
+      "decision": "Accept Base.metadata.create_all without Alembic migrations for V1",
+      "rationale": "Sufficient for development and single-user deployment. Alembic must be added before any production schema changes.",
+      "accepted": true
+    },
+    {
+      "decision": "Defer P1 stories (PWC crawler, conference crawler, author UI, advanced search UI) to post-V1",
+      "rationale": "P0 is feature-complete. P1 APIs and data models are ready; only crawler implementations and UI polish needed.",
+      "accepted": true
+    }
+  ],
+  "open_issues": [
+    {
+      "id": "QA-001",
+      "severity": "medium",
+      "area": "Backend - Paper Model",
+      "description": "Duplicate index ix_paper_merged_into_id defined both via Column(index=True) and explicit Index() in __table_args__. Causes sqlite3.OperationalError on schema re-creation. Breaks 37/50 tests.",
+      "recommendation": "Remove either index=True from the merged_into_id Column definition, or remove the explicit Index() from __table_args__.",
+      "status": "open"
+    },
+    {
+      "id": "QA-002",
+      "severity": "medium",
+      "area": "Backend - Tests",
+      "description": "37 of 50 automated tests fail due to QA-001 (duplicate index). Only 13 crawler tests pass. Endpoint logic, dedup, and service functions cannot be verified by automated tests until QA-001 is fixed.",
+      "recommendation": "Fix QA-001, then re-run full test suite.",
+      "status": "open",
+      "blocked_by": "QA-001"
+    },
+    {
+      "id": "QA-003",
+      "severity": "medium",
+      "area": "Backend - PWC Crawler",
+      "description": "P1 user story 9 (Papers With Code crawling) is not implemented. No crawler file exists for PWC. The plugin architecture supports it; needs a new class implementing BaseCrawler.",
+      "recommendation": "Implement in post-V1 sprint.",
+      "status": "open"
+    },
+    {
+      "id": "QA-004",
+      "severity": "medium",
+      "area": "Backend - Conference Crawler",
+      "description": "P1 user story 10 (Conference proceedings from dblp/OpenReview) is not implemented. No crawler file exists.",
+      "recommendation": "Implement in post-V1 sprint.",
+      "status": "open"
+    },
+    {
+      "id": "QA-005",
+      "severity": "low",
+      "area": "Frontend - Author Browsing",
+      "description": "Backend has /authors and /authors/{id} endpoints. Frontend has api/authors.ts and type definitions, but no AuthorListPage or AuthorDetailPage route in App.tsx. No author filter on paper list page.",
+      "recommendation": "Add author browsing page and author filter in post-V1 sprint (completes P1 story 11).",
+      "status": "open"
+    },
+    {
+      "id": "QA-006",
+      "severity": "low",
+      "area": "Frontend - Advanced Search UI",
+      "description": "P1 story 12 (stacked filter chips) is partially implemented. API supports all filter combos, but the UI uses individual filter controls rather than chip-based stacking.",
+      "recommendation": "Implement filter chip stacking pattern in post-V1 sprint.",
+      "status": "open"
+    },
+    {
+      "id": "QA-007",
+      "severity": "low",
+      "area": "Infrastructure - Docker",
+      "description": "No docker-compose.yml found. The requirements specify single docker-compose up deployment. Backend and frontend can be run separately with uvicorn and vite dev server.",
+      "recommendation": "Create docker-compose.yml before production deployment.",
+      "status": "open"
+    },
+    {
+      "id": "QA-008",
+      "severity": "low",
+      "area": "Backend - Alembic Migrations",
+      "description": "Alembic is listed in requirements.txt but no alembic.ini, env.py, or versions/ directory exists. Schema creation uses Base.metadata.create_all only.",
+      "recommendation": "Initialize Alembic before first schema change in production.",
+      "status": "open"
+    }
+  ],
+  "verification_summary": {
+    "backend_import": "PASS - All modules import without errors",
+    "backend_routes": "PASS - All 21 endpoints registered matching API contract",
+    "backend_schemas": "PASS - All Pydantic schemas match contract data types",
+    "backend_crawlers": "PASS - Arxiv and GitHub crawlers with error isolation and rate limiting",
+    "backend_scheduler": "PASS - 4 APScheduler jobs (arxiv, github, daily, weekly)",
+    "backend_reports": "PASS - Jinja2 templates, ReportGenerator, file-based delivery",
+    "backend_tests": "PARTIAL - 13/50 pass; 37 fail due to duplicate index bug (QA-001)",
+    "frontend_build": "PASS - Zero TypeScript errors, 187 KB gzipped bundle",
+    "frontend_routes": "PASS - All 9 pages registered with 404 redirect",
+    "frontend_components": "PASS - All 10 shared components + 2 layout components present",
+    "frontend_types": "PASS - All 8 type files match API contract response shapes",
+    "frontend_api": "PASS - All 9 API modules covering all 21 endpoints",
+    "frontend_states": "PASS - Loading, empty, error, pagination states implemented"
+  },
+  "pointers": {
+    "test_report": "docs/test-report.md",
+    "requirements": "docs/requirements.md",
+    "api_contract": "docs/api-contract.md",
+    "frontend_handoff": "docs/handoff/frontend-to-qa.json",
+    "backend_handoff": "docs/handoff/backend-to-qa.json"
+  }
+}

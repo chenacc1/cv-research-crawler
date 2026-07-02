@@ -1,0 +1,73 @@
+# Daily Report — {{ date_range_end }}
+
+**Generated:** {{ generated_at }}
+
+---
+
+## New Papers Today
+
+{% if papers.categories %}
+{% for cat in papers.categories %}
+### {{ cat.name }} ({{ cat.papers | length }} papers)
+
+{% for paper in cat.papers %}
+#### {{ loop.index }}. {{ paper.title }}
+
+- **Source:** {{ paper.source }} ({{ paper.source_id | default('N/A') }})
+- **Published:** {{ paper.published_date | default('N/A') }}
+- **Venue:** {{ paper.venue | default('N/A') }}
+- **URL:** {{ paper.url }}
+{% if paper.code_url %}- **Code:** {{ paper.code_url }}{% endif %}
+
+{% endfor %}
+{% endfor %}
+{% elif papers is iterable and papers is not mapping %}
+{% for paper in papers %}
+### {{ loop.index }}. {{ paper.title }}
+
+- **Source:** {{ paper.source }} ({{ paper.source_id | default('N/A') }})
+- **Published:** {{ paper.published_date | default('N/A') }}
+- **Venue:** {{ paper.venue | default('N/A') }}
+- **URL:** {{ paper.url }}
+{% if paper.code_url %}- **Code:** {{ paper.code_url }}{% endif %}
+
+{% endfor %}
+{% else %}
+No new papers found today.
+{% endif %}
+
+---
+
+## Trending GitHub Repos
+
+{% if repos %}
+{% for repo in repos %}
+### {{ loop.index }}. {{ repo.full_name }}
+
+- **Stars:** {{ repo.stars }}
+- **Forks:** {{ repo.forks }}
+- **Language:** {{ repo.language | default('N/A') }}
+- **Topics:** {{ repo.topics | join(', ') if repo.topics else 'N/A' }}
+- **Description:** {{ repo.description | default('N/A') }}
+- **URL:** {{ repo.url }}
+
+{% endfor %}
+{% else %}
+No trending repos found today.
+{% endif %}
+
+---
+
+## Category Breakdown
+
+| Category | Count |
+|----------|-------|
+{% for cat in stats.categories | default([]) %}
+| {{ cat.name }} | {{ cat.count }} |
+{% else %}
+| N/A | {{ stats.paper_count }} |
+{% endfor %}
+
+---
+
+*Report generated at {{ generated_at }}*
