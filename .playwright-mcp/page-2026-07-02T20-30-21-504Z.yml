@@ -1,0 +1,38 @@
+- generic [ref=f1e3]:
+  - complementary [ref=f1e4]:
+    - generic [ref=f1e6]: CV 研究爬虫
+    - navigation [ref=f1e7]:
+      - link "仪表盘" [ref=f1e8] [cursor=pointer]:
+        - /url: /
+      - link "论文" [ref=f1e9] [cursor=pointer]:
+        - /url: /papers
+      - link "仓库" [ref=f1e10] [cursor=pointer]:
+        - /url: /repos
+      - link "标签" [ref=f1e11] [cursor=pointer]:
+        - /url: /tags
+      - link "报告" [ref=f1e12] [cursor=pointer]:
+        - /url: /reports
+      - link "爬取" [ref=f1e13] [cursor=pointer]:
+        - /url: /crawls
+      - link "关键词" [ref=f1e14] [cursor=pointer]:
+        - /url: /keywords
+    - generic [ref=f1e15]:
+      - button "English" [ref=f1e16] [cursor=pointer]
+      - paragraph [ref=f1e17]: CV Research Crawler v1.0
+  - main [ref=f1e18]:
+    - generic [ref=f1e20]:
+      - generic [ref=f1e21]:
+        - heading "论文" [level=1] [ref=f1e22]
+        - button "English" [ref=f1e23]
+      - generic [ref=f1e24]:
+        - generic [ref=f1e25]:
+          - generic [ref=f1e28] [cursor=pointer]: Source
+          - generic [ref=f1e29]:
+            - generic [ref=f1e30]: "Date:"
+            - textbox "Date from" [ref=f1e31]
+            - generic [ref=f1e32]: to
+            - textbox "Date to" [ref=f1e33]
+          - generic [ref=f1e37] [cursor=pointer]: Filter by tags...
+          - textbox "Search title & abstract..." [ref=f1e38]
+          - generic [ref=f1e41] [cursor=pointer]: 最新优先
+        - paragraph [ref=f1e42]: No active filters

@@ -19,3 +19,7 @@ frontend/dist/
 docker-compose.override.yml
 .vscode/
 .idea/
+.superpowers/
+docs/handoff/
+docs/superpowers/
+docs/test-report.md
