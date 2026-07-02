@@ -1,155 +1,116 @@
 # CV Research Crawler
 
-AI-powered knowledge crawler for Computer Vision research papers and GitHub repositories, with dual-language UI and LLM-generated summaries.
+**帮你自动追踪CV领域最新论文和GitHub项目，用本地AI写中英文摘要。省下刷arxiv的时间，专注真正重要的事。**
 
-## Features
+<p align="center">
+  <img src="screenshots/dashboard.png" width="45%" alt="Dashboard" />
+  <img src="screenshots/papers.png" width="45%" alt="Papers" />
+</p>
 
-- **Automated Crawling** — Fetches papers from arxiv (cs.CV, cs.AI, cs.LG, cs.MM, cs.CL) and GitHub repos across 9 CV topics
-- **AI Summaries** — Local LLM (Ollama) generates Chinese + English summaries for every paper and repository
-- **Keyword Expansion** — Input a broad research direction, AI generates specific sub-topic keywords for precise filtering
-- **Smart Filtering** — Only crawl content matching your selected keywords; toggle keywords on/off anytime
-- **Dual Language** — Full Chinese/English UI with one-click toggle; all interface text switches languages
-- **Scheduled Reports** — Auto-generated daily (22:00) and weekly (Mon 10:00) Markdown digests
-- **Tag Management** — Create custom colored tags, assign to papers/repos, filter by tags
-- **Neo-Glass UI** — Glassmorphism + neumorphism hybrid design system (light theme)
+---
 
-## Screenshots
+## 为什么做这个工具？
 
-### Dashboard
-![Dashboard](screenshots/dashboard.png)
+每天打开arxiv，CV分类下又多了200篇新论文。快速扫标题、点开几篇读摘要、判断价值——一小时没了。三天后隐约记得有篇论文讲了你关心的问题，但想不起来是哪篇。
 
-### Papers Browser
-![Papers](screenshots/papers.png)
+**这个工具解决的就是这个：自动收集、AI理解、分类存储、随时检索。**
 
-### Crawl Status & Scheduler
-![Crawl Status](screenshots/crawls.png)
+---
 
-### Keyword Management
-![Keywords](screenshots/keywords.png)
+## 它做什么？
 
-## Tech Stack
+| 你的痛点 | 它怎么解决 |
+|----------|-----------|
+| 论文太多看不完 | 爬下来后用**本地大模型**自动生成中文摘要，3-5句话看懂一篇 |
+| 搜索太宽泛，找不到想要的 | 输入"3D视觉"，AI自动扩展出NeRF、Gaussian Splatting等十几个细分关键词，**精准筛选** |
+| 看完就忘，找不到 | 自定义**彩色标签**（"必读"/"轻量化"/"代码开源"），打标后秒筛选 |
+| 每天手动刷arxiv/GitHub | **全自动定时爬取**，arxiv每6小时、GitHub每2小时，打开网页就有结果 |
+| 英文摘要读着累 | **中英双语摘要**自动生成，理解用中文，引用用英文 |
+| 界面只有英文 | 一键**中英切换**，所有文字、按钮、标签全切换 |
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | Python 3.12+, FastAPI, SQLAlchemy 2.0, APScheduler |
-| Frontend | React 18, TypeScript, Tailwind CSS 4, Vite 6 |
-| Database | SQLite (WAL mode, default) / PostgreSQL (optional) |
-| AI/LLM | Ollama (local), OpenAI-compatible API support |
-| Reports | Jinja2 templates → Markdown files |
-| Container | Docker Compose (single-stack deployment) |
+---
 
-## Quick Start
+## 核心功能
 
-### Prerequisites
+- **自动爬取** — arxiv 5个CV分类 + GitHub 9个CV主题，定时全自动，也可一键手动触发
+- **AI摘要** — 本地Ollama大模型生成中英双语摘要，**免费、离线、不限量**
+- **关键词扩展** — 输入研究方向 → AI生成细分关键词 → 勾选 → 只爬你关心的
+- **智能筛选** — 不匹配关键词的内容不入库，过滤噪音
+- **中英双语** — 全界面一键切换，150+文本项全覆盖
+- **定时报告** — 每晚10点日报 + 每周一10点周报，Markdown格式
+- **标签管理** — 16色调色板，论文/仓库均可打自定义标签
+- **全文搜索** — FTS5全文检索，支持来源、分类、日期、标签多维度组合筛选
 
-- Python 3.12+
-- Node.js 18+
-- [Ollama](https://ollama.com) (optional, for AI summaries)
+| Dashboard | Papers Browser |
+|-----------|---------------|
+| ![Dashboard](screenshots/dashboard.png) | ![Papers](screenshots/papers.png) |
 
-### 1. Setup
+| Crawl Scheduler | Keyword Management |
+|----------------|-------------------|
+| ![Crawls](screenshots/crawls.png) | ![Keywords](screenshots/keywords.png) |
+
+---
+
+## 不需要API Key，完全本地运行
+
+只需要装一个 [Ollama](https://ollama.com)，下载任意开源模型：
+
+```bash
+ollama pull qwen3.5   # 中文能力强
+# 或
+ollama pull gemma4    # 速度快
+```
+
+工具自动调用Ollama生成摘要和扩展关键词。**不花钱、不联网、数据全在你本地。**
+
+---
+
+## 5分钟跑起来
 
 ```bash
 git clone https://github.com/chenacc1/cv-research-crawler.git
 cd cv-research-crawler
-```
 
-### 2. Backend
-
-```bash
+# 后端
 cd backend
-cp .env.example .env          # Edit .env to configure
 pip install -r requirements.txt
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
 
-### 3. Frontend
-
-```bash
+# 前端（新终端）
 cd frontend
-npm install
-npm run dev
+npm install && npm run dev
 ```
 
-Open http://localhost:5173
+打开 http://localhost:5173，从下载到看到论文数据不超过10分钟。
 
-### 4. Configure Ollama (optional)
+---
 
-```bash
-ollama pull gemma4:e4b    # or any model you prefer
-```
+## 技术栈
 
-Edit `backend/.env`:
-```
-LLM_API_BASE=http://localhost:11434
-LLM_MODEL=gemma4:e4b
-LLM_SUMMARY_ENABLED=true
-```
+| 层级 | 技术 |
+|------|------|
+| 后端 | Python 3.12+ / FastAPI / SQLAlchemy 2.0 / APScheduler |
+| 前端 | React 18 / TypeScript / Tailwind CSS 4 / Vite 6 |
+| 数据库 | SQLite WAL模式 (默认) / PostgreSQL (可选) |
+| AI模型 | Ollama (本地) / 任意OpenAI兼容API |
+| 部署 | Docker Compose 一键部署 |
 
-## Project Structure
+---
 
-```
-├── backend/
-│   ├── app/
-│   │   ├── crawlers/      # Arxiv & GitHub crawler plugins
-│   │   ├── engine/        # APScheduler + report generator
-│   │   ├── models/        # SQLAlchemy ORM models
-│   │   ├── routers/       # FastAPI route handlers
-│   │   ├── schemas/       # Pydantic request/response
-│   │   └── services/      # Business logic + LLM service
-│   └── requirements.txt
-├── frontend/
-│   └── src/
-│       ├── components/    # Reusable UI (glass design system)
-│       ├── hooks/         # Custom React hooks
-│       ├── i18n/          # Chinese/English translations
-│       ├── pages/         # Page components
-│       └── types/         # TypeScript interfaces
-├── docs/
-│   ├── requirements.md    # Product requirements
-│   ├── architecture.md    # Technical architecture
-│   └── api-contract.md    # REST API specification
-├── docker-compose.yml     # One-command deployment
-└── .env.example           # Configuration template
-```
+## 配置
 
-## API Endpoints
+编辑 `backend/.env`：
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/papers` | List papers (filter, search, paginate) |
-| GET | `/api/v1/papers/{id}` | Paper detail |
-| GET | `/api/v1/repos` | List repos |
-| GET | `/api/v1/tags` | List/manage tags |
-| GET | `/api/v1/reports` | Browse generated reports |
-| GET | `/api/v1/crawls/status` | Scheduler job status |
-| POST | `/api/v1/crawls/trigger/{source}` | Manual crawl trigger |
-| POST | `/api/v1/crawl-keywords/expand` | LLM keyword expansion |
-| GET | `/api/v1/stats` | Dashboard statistics |
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `LLM_API_BASE` | `http://localhost:11434` | Ollama或OpenAI API地址 |
+| `LLM_MODEL` | `gemma4:e4b` | 模型名称 |
+| `LLM_SUMMARY_ENABLED` | `true` | 是否启用AI摘要 |
+| `CRAWLER_ARXIV_INTERVAL_MINUTES` | `360` | arxiv爬取间隔 |
+| `CRAWLER_GITHUB_INTERVAL_MINUTES` | `120` | GitHub爬取间隔 |
+| `GITHUB_TOKEN` | — | GitHub API Token（可选，提升限额） |
 
-Full OpenAPI docs at http://localhost:8000/docs
-
-## Docker Deployment
-
-```bash
-docker compose -p cv-crawler up -d
-# Backend: :8000  Frontend: :3000
-```
-
-## Configuration
-
-All settings via environment variables in `.env`:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | `sqlite+aiosqlite:///./data/app.db` | Database connection |
-| `GITHUB_TOKEN` | — | GitHub API token (optional) |
-| `CRAWLER_ARXIV_INTERVAL_MINUTES` | `360` | Arxiv crawl interval |
-| `CRAWLER_GITHUB_INTERVAL_MINUTES` | `120` | GitHub crawl interval |
-| `LLM_API_BASE` | `http://localhost:11434` | Ollama/OpenAI API URL |
-| `LLM_MODEL` | `gemma4:e4b` | LLM model name |
-| `CRAWLER_KEYWORDS` | — | Comma-separated fallback keywords |
-| `REPORT_DAILY_CRON` | `0 22 * * *` | Daily report schedule |
-| `REPORT_WEEKLY_CRON` | `0 10 * * 1` | Weekly report schedule |
+---
 
 ## License
 
