@@ -43,11 +43,13 @@
 
 | Dashboard | Papers Browser |
 |-----------|---------------|
-| ![Dashboard](screenshots/dashboard.png) | ![Papers](screenshots/papers.png) |
+| ![Dashboard](screenshots/dashboard.png) |
+| ![Papers](screenshots/papers.png) |
 
 | Crawl Scheduler | Keyword Management |
 |----------------|-------------------|
-| ![Crawls](screenshots/crawls.png) | ![Keywords](screenshots/keywords.png) |
+| ![Crawls](screenshots/crawls.png) | 
+|![Keywords](screenshots/keywords.png) |
 
 ---
 
