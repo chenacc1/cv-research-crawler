@@ -4,7 +4,7 @@
 
 <p align="center">
   <img src="screenshots/dashboard.png" width="45%" alt="Dashboard" />
-  
+  /n
   <img src="screenshots/papers.png" width="45%" alt="Papers" />
 </p>
 
